@@ -3,6 +3,7 @@
 # dependencies = []
 # ///
 
+import random
 import threading
 import time
 
@@ -12,7 +13,7 @@ def download_file(url: str, file_name: str) -> str:
 
     thread_name = threading.current_thread().name
     print(f"[{thread_name}] Starting: {file_name}")
-    time.sleep(2)  # simulate download time
+    time.sleep(random.uniform(2, 6))  # simulate download time [random time for each thread]
     print(f"[{thread_name}] Completed: {file_name}")
     return file_name
 
