@@ -8,80 +8,61 @@ import threading
 import time
 
 
-class DownloadThread(threading.Thread):
-    """Custom thread class for downloading files with buit-in retry logic"""
+def download_with_options(file_id: int, file_name: str, size_mb: int = 1, priority: str = "normal", max_retries: int = 3) -> None:
+    """Simulate downloading a file with various options and retry logic"""
 
-    def __init__(self, url: str, file_name: str, max_retries: int = 3) -> None:
-        super().__init__(name=f"Downloader-{file_name.split('.')[0]}")
-        self.url = url
-        self.file_name = file_name
-        self.max_retries = max_retries
-        self.result = None
-        self.download_time = None
-        self.attemps = 0
+    thread = threading.current_thread().name
+    print(f"[{thread}] Download {file_id}: {file_name} ({size_mb}MB, {priority})")
 
-    def run(self) -> None:
-        """Called when thread.start() runs"""
-        print(f"[{self.name}] Starting Download: {self.file_name}")
-        start_time = time.time()
+    # Calculate download time based on size and priority
+    base_time = size_mb * 0.3
+    if priority == "high":
+        base_time *= 0.7  # higher priority downloads faster
+    if priority == "low":
+        base_time *= 1.3  # lowe priority downloads slower
 
-        for attempt in range(1, self.max_retries + 1):
-            self.attemps = attempt
-            try:
-                print(f"[{self.name}] Attemp {attempt} for {self.file_name}")
-                time.sleep(random.uniform(2, 6))  # simulate download time
+    # Retry logic with simulated failures
+    for attempt in range(1, max_retries + 1):
+        try:
+            print(f"[{thread}] Attempt {attempt} for {file_name}")
+            time.sleep(base_time)  # simulate download time
 
-                if attempt == 1 and random.random() < 0.2:  # 20% chance of failure
-                    raise RuntimeError("Network timeout")
+            # Simulate random network failure on first attempt
+            if attempt == 0 and random.random() < 0.2:
+                raise RuntimeError("Network timeout")
 
-                self.download_time = time.time() - start_time
-                self.result = "success"
-                print(
-                    f"[{self.name}] {self.file_name} downloaded in {self.download_time:.1f}s"
-                )
-                return
+            print(f"[{thread}] Downloaded {file_name} successfully")
+            return
 
-            except RuntimeError as err:
-                print(f"[{self.name}] Attempt {attempt} failed: {err}")
-                if attempt < self.max_retries:
-                    time.sleep(0.5)  # brief pause before retry
-                else:
-                    self.result = "failed"
-                    self.download_time = time.time() - start_time
-                    print(f"[{self.name}] Permanently failed after {attempt} attemps")
+        except RuntimeError as err:
+            print(f"[{thread}] Failed attempt {attempt}: {err}")
+            time.sleep(0.5)  # wait before retry
 
+def demonstrate_safe() -> None:
+    """Show how immutable arguments are safely passed to threads"""
 
-def demonstrate_custom_threads() -> None:
-    files = [
-        ("https://example.com/video.mp4", "video.mp4"),
-        ("https://example.com/document.pdf", "document.pdf"),
-        ("https://example.com/music.mp3", "music.mp3"),
-        ("https://example.com/word.doc", "word.doc"),
-    ]
+    print("--- Safe argument passing ---")
 
-    print("--- Custom Thread Class Downloads ---")
-    download_threads = [DownloadThread(url, file_name) for url, file_name in files]
+    # Create threads with different argument combinations
+    t1 = threading.Thread(target=download_with_options, args=(1, "video.mp4"))
+    t2 = threading.Thread(
+        target=download_with_options,
+        args=(2, "document.pdf"),
+        kwargs={"size_mb": 5, "priority": "high"}
+    )
+    t3 = threading.Thread(
+        target=download_with_options,
+        args=(3, "music.mp3"),
+        kwargs={"priority": "low"}
+    )
 
-    start_time = time.time()
-    for t in download_threads:
+    # Start all threads
+    for t in [t1, t2, t3]:
         t.start()
-    for t in download_threads:
+
+    # Wait for all threads to complete
+    for t in [t1, t2, t3]:
         t.join()
-    total_time = time.time() - start_time
-
-    print("\n--- Download Results ---")
-    successful = 0
-    for t in download_threads:
-        status = "Success" if t.result == "success" else "Failed"
-        print(
-            f"{status} - {t.file_name}: {t.result} ({t.attemps} attempts, {t.download_time:.1f}s)"
-        )
-        if t.result == "success":
-            successful += 1
-
-    print(f"Total time: {total_time:.1f} seconds")
-    print(f"Success rate: {successful}/{len(download_threads)}")
-
 
 if __name__ == "__main__":
-    demonstrate_custom_threads()
+    demonstrate_safe()
