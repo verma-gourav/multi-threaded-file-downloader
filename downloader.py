@@ -3,55 +3,62 @@
 # dependencies = []
 # ///
 
-import random
 import threading
 import time
 
-# Global download statistics shared by all threads
+# Global download statistics and lock to protect them
 download_counter = 0
 bytes_downloaded = 0
+completed_files = 0
+stats_lock = threading.Lock()
+
 
 def download_with_tracking(file_name: str, size_mb: int) -> None:
     """Download file and track statistics - UNSAFE"""
 
-    global download_counter, bytes_downloaded
+    global download_counter, bytes_downloaded, completed_files
 
     print(f"Starting download: {file_name}")
 
     # Simulate downlaoding in small chunks
     chunks = size_mb * 100  # 100 chunks per MB
     for _ in range(chunks):
-        # These lines are NOT atomic - each is actually multiple operations:
-        # 1. Read current value of counter
-        # 2. Add 1 to that value
-        # 3. Store the results back to counter
-        # Othr threads can interfere b/w these steps
+        # The 'with' statement acts as a context manager for lock
+        with stats_lock:
+            # Only one thread can execute these lines at a time
+            # This prevents race conditions
 
-        current_counter = download_counter
-        current_bytes = bytes_downloaded
+            current_counter = download_counter
+            current_bytes = bytes_downloaded
 
-        # Small delay to make race condition more likely
-        time.sleep(0.0001)
+            # Small delay to make race condition more likely
+            time.sleep(0.0001)
 
-        download_counter = current_counter + 1
-        bytes_downloaded = current_bytes + 10240  # 10KB per chunk
+            download_counter = current_counter + 1
+            bytes_downloaded = current_bytes + 10240  # 10KB per chunk
+
+        # Safely update completion count
+        with stats_lock:
+            completed_files += 1
 
     print(f"Completed: {file_name}")
 
 
-def demonstrate_download_race() -> None:
-    """Show how race conditions corrupt download statistics"""
+def demonstrate_safe_downloads() -> None:
+    """Show how locks prevent race conditions in download tracking"""
 
-    global download_counter, bytes_downloaded
+    global download_counter, bytes_downloaded, completed_files
     download_counter = 0
     bytes_downloaded = 0
+    completed_files = 0
 
-    print("--- Download Race Condition Demo ---")
+    print("--- Safe Download Statistics with Lock ---")
 
     files = [
         ("video.mp4", 20),
         ("document.pdf", 5),
-        ("music.mp3", 10)
+        ("music.mp3", 10),
+        ("image.jpg", 3)
     ]
 
     # Calculate expected totals
@@ -78,7 +85,7 @@ def demonstrate_download_race() -> None:
 
     total_time = time.time() - start_time
 
-    print("\n--- Results (likely corrupted due to race conditions) ---")
+    print("\n--- Results (now accurate with locks) ---")
     print(f"Expected chunks: {expected_chunks:,}")
     print(f"Actual chunks: {download_counter:,}")
     print(f"Lost chunks: {expected_chunks - download_counter:,}")
@@ -90,4 +97,4 @@ def demonstrate_download_race() -> None:
 
 
 if __name__ == "__main__":
-    demonstrate_download_race()
+    demonstrate_safe_downloads()
