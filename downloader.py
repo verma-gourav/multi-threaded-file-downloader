@@ -14,7 +14,7 @@ stats_lock = threading.Lock()
 
 
 def download_with_tracking(file_name: str, size_mb: int) -> None:
-    """Download file and track statistics - UNSAFE"""
+    """Safely download file and track statistics using a lock"""
 
     global download_counter, bytes_downloaded, completed_files
 
@@ -58,7 +58,7 @@ def demonstrate_safe_downloads() -> None:
         ("video.mp4", 20),
         ("document.pdf", 5),
         ("music.mp3", 10),
-        ("image.jpg", 3)
+        ("image.jpg", 3),
     ]
 
     # Calculate expected totals
@@ -73,7 +73,7 @@ def demonstrate_safe_downloads() -> None:
         thread = threading.Thread(
             target=download_with_tracking,
             args=(file_name, size_mb),
-            name=f"Downloader-{file_name.split(".")[0]}"
+            name=f"Downloader-{file_name.split('.')[0]}",
         )
         threads.append(thread)
 
@@ -92,7 +92,7 @@ def demonstrate_safe_downloads() -> None:
     print(f"Expected bytes: {expected_bytes:,}")
     print(f"Actual bytes: {bytes_downloaded:,}")
     print(f"Lost bytes: {expected_bytes - bytes_downloaded:,}")
-    print(f"Accuracy: {(download_counter/expected_chunks)*100:.1f}%")
+    print(f"Accuracy: {(download_counter / expected_chunks) * 100:.1f}%")
     print(f"Time taken: {total_time:.2f} seconds")
 
 
